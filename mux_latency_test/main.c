@@ -13,11 +13,10 @@
 #include <rte_ring.h>
 #include <rte_byteorder.h>
 
+#define MAX_EPISODES 20
 #define PACKET_SIZE 128
 
 #define PORTS_COUNT 2
-#define TX_PORT_ID 0
-#define RX_PORT_ID 1
 #define MAX_PKT_QUOTA 128
 #define TIMED_BURST_COUNT 1000
 
@@ -29,6 +28,9 @@
 #define MEM_POOL_CACHE_SIZE 128
 
 #define RING_SIZE (64 * 1024)
+
+int TX_PORT_ID = 0;
+int RX_PORT_ID = 1;
 
 struct rte_ring *rings[1];
 struct rte_mempool *mbuf_pool;
@@ -314,19 +316,47 @@ void configure_eth_port(uint16_t port_id)
     rte_eth_promiscuous_enable(port_id);
 }
 
+void load_ports_mapping(void)
+{
+    FILE* cfg = fopen("mux_ports.cfg","r");
+    if (cfg)
+    {
+        char * line = NULL;
+        size_t len = 0;
+        ssize_t read;
+
+        while ((read = getline(&line, &len, cfg)) != -1) {
+            if (strstr(line, "TX_40G"))
+            {
+                sscanf(line, "TX_40G=%d", &TX_PORT_ID);
+            }
+
+            if (strstr(line, "RX_40G"))
+            {
+                sscanf(line, "RX_40G=%d", &RX_PORT_ID);
+            }
+        }
+
+        if (line)
+            free(line);
+        fclose(cfg);
+    }
+}
 
 int
 main(int argc, char **argv)
 {
-    int ret;
+    int ret, episodes = 0;
+    double max_latency = 0;
     struct rte_eth_stats stats;
-    uint16_t port_id;
     rte_log_set_global_level(RTE_LOG_INFO);
     ret = rte_eal_init(argc, argv);
     if (ret < 0)
         rte_exit(EXIT_FAILURE, "Cannot initialize EAL\n");
 
     /* Parse the application's arguments */
+    load_ports_mapping();
+
 
     /* Create a pool of mbuf to store packets */
     mbuf_pool = rte_pktmbuf_pool_create("mbuf_pool", MEM_POOL_SIZE, MEM_POOL_CACHE_SIZE, 0,
@@ -339,14 +369,14 @@ main(int argc, char **argv)
     if (mbuf_pool_tx == NULL)
         rte_panic("%s\n", rte_strerror(rte_errno));
 
-    for (port_id = 0; port_id < PORTS_COUNT; port_id++)
-        configure_eth_port(port_id);
+    configure_eth_port(TX_PORT_ID);
+    configure_eth_port(RX_PORT_ID);
 
     rte_eal_remote_launch(timestamp_stage, NULL, 4);
     rte_eal_remote_launch(receive_stage, NULL, 2);
     rte_eal_remote_launch(tx_stage, NULL, 3);
 
-    while( 1 ) {
+    while( episodes < MAX_EPISODES ) {
         int i;
         double pkt_mean = 0;
         rte_delay_ms(1000);
@@ -359,11 +389,15 @@ main(int argc, char **argv)
                 pkt_mean += pkt_times[i];
             }
             pkt_mean /= TIMESTAMP_COUNT;
+            if (max_latency < pkt_mean) max_latency = pkt_mean;
 
             RTE_LOG(INFO, USER1,
-                    "Stats: pkts: %lu  dropped: %lu  gtms: %lu  PKT_TIME0: %lu PKT_TIME_MEAN: %.3lf\n", stats.ipackets, stats.imissed, g_time_ns, pkt_times[0], pkt_mean);
+                    "[%d] Stats: pkts: %lu  dropped: %lu  gtms: %lu  PKT_TIME0: %lu PKT_TIME_MEAN: %.3lf\n", episodes+1, stats.ipackets, stats.imissed, g_time_ns, pkt_times[0], pkt_mean);
+            ++episodes;
         }
     }
+
+    RTE_LOG(INFO, USER1, "\n\nLatency test finished, RESULT=%.3lf nanoseconds", max_latency);
 
     return 0;
 }
