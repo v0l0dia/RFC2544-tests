@@ -326,14 +326,14 @@ void load_ports_mapping(void)
         ssize_t read;
 
         while ((read = getline(&line, &len, cfg)) != -1) {
-            if (strstr(line, "TX_40G"))
+            if (strstr(line, "latency_TX_40G"))
             {
-                sscanf(line, "TX_40G=%d", &TX_PORT_ID);
+                sscanf(line, "latency_TX_40G=%d", &TX_PORT_ID);
             }
 
-            if (strstr(line, "RX_40G"))
+            if (strstr(line, "latency_RX_40G"))
             {
-                sscanf(line, "RX_40G=%d", &RX_PORT_ID);
+                sscanf(line, "latency_RX_40G=%d", &RX_PORT_ID);
             }
         }
 
