@@ -397,7 +397,7 @@ main(int argc, char **argv)
         }
     }
 
-    RTE_LOG(INFO, USER1, "\n\nLatency test finished, RESULT=%.3lf nanoseconds", max_latency);
+    RTE_LOG(INFO, USER1, "\n\nLatency test finished, RESULT=%.3lf nanoseconds\n\n", max_latency);
 
     return 0;
 }
