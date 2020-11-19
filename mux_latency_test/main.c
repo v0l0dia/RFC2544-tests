@@ -1,6 +1,3 @@
-/* SPDX-License-Identifier: BSD-3-Clause
- * Copyright(c) 2010-2014 Intel Corporation
- */
 #include <rte_eal.h>
 #include <rte_common.h>
 #include <rte_debug.h>

@@ -1,5 +1,3 @@
--- SPDX-License-Identifier: BSD-3-Clause
-
 -- Create some short cuts to the real functions.
 gsub	    = string.gsub
 gmatch      = string.gmatch

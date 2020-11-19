@@ -1,6 +1,5 @@
 -- RFC2544 B2B Test
 -- as defined by https://www.ietf.org/rfc/rfc2544.txt
---  SPDX-License-Identifier: BSD-3-Clause
 
 package.path = package.path ..";?.lua;test/?.lua;app/?.lua;../?.lua"
 
